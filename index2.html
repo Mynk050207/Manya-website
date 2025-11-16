@@ -1,0 +1,212 @@
+<!--
+Romantic Pink — Single-file website (fixed syntax errors)
+How to use:
+1) Replace /images/photo1.jpg, /images/photo2.jpg, ... with your images (same filenames or update HTML).
+2) Replace YOUTUBE_VIDEO_ID with the ID from a YouTube link (for example, https://youtu.be/dQw4w9WgXcQ -> dQw4w9WgXcQ).
+3) Upload this file and your images to a website host (GitHub Pages, Netlify, or any static host).
+
+This version fixes a JavaScript syntax error (misplaced token after openModal/closeModal) and adds small robustness checks.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>For Manya ❤️</title>
+  <style>
+    :root{
+      --bg:#fff0f6;
+      --card:#fff;
+      --accent:#ff6b81;
+      --muted:#7a3a44;
+      --glass: rgba(255,255,255,0.6);
+      font-family: 'Segoe UI', Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; background:linear-gradient(180deg,var(--bg),#ffeaf0); color:var(--muted);}    
+    header{padding:40px 20px; text-align:center; position:relative;}
+    .card{max-width:980px;margin:0 auto;background:var(--card);border-radius:18px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,0.08)}
+    h1{margin:0;font-size:38px;color:#4a1420;letter-spacing:1px}
+    p.lead{margin:8px 0 18px;font-size:16px}
+
+    /* Controls */
+    .controls{display:flex;gap:12px;justify-content:center;margin-bottom:14px}
+    .btn{background:linear-gradient(90deg,var(--accent),#ff8aa0);border:none;color:white;padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:600;box-shadow:0 6px 18px rgba(255,107,129,0.18)}
+    .btn.ghost{background:transparent;color:var(--accent);border:2px solid rgba(255,107,129,0.12)}
+
+    /* Gallery grid */
+    .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:14px}
+    .thumb{border-radius:12px;overflow:hidden;cursor:pointer;position:relative}
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+    .thumb:hover img{transform:scale(1.06)}
+
+    /* Slideshow modal */
+    .modal{position:fixed;inset:0;background:rgba(10,6,8,0.6);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;visibility:hidden;opacity:0;transition:opacity .18s}
+    .modal.open{visibility:visible;opacity:1}
+    .slide{max-width:920px;width:100%;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.03));border-radius:12px;padding:12px;display:flex;gap:12px;align-items:center}
+    .big{flex:1;border-radius:10px;overflow:hidden}
+    .big img{width:100%;height:70vh;object-fit:cover}
+    .meta{width:260px;padding:12px}
+    .meta h2{margin:6px 0}
+    .navs{display:flex;gap:8px;margin-top:12px}
+
+    /* Hearts */
+    .hearts{position:fixed;right:12px;bottom:12px;pointer-events:none;z-index:50}
+    .heart{width:14px;height:14px;background:var(--accent);transform:rotate(-45deg);border-radius:3px;position:relative;margin:4px}
+    .heart:before,.heart:after{content:'';position:absolute;background:var(--accent);width:14px;height:14px;border-radius:50%}
+    .heart:before{top:-7px;left:0}
+    .heart:after{left:7px;top:0}
+
+    /* Responsive */
+    @media (max-width:800px){ .slide{flex-direction:column} .meta{width:100%} .big img{height:50vh} }
+
+    footer{margin-top:18px;text-align:center;padding:14px;color:#6b3b45;font-size:14px}
+    /* small helper */
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="card">
+      <h1>For Manya ❤️</h1>
+      <p class="lead">A little corner for your photos and the songs that remind me of you.</p>
+
+      <div class="controls">
+        <button class="btn" id="playBtn">▶ Play Song</button>
+        <button class="btn ghost" id="pauseBtn">⏸ Pause</button>
+        <button class="btn ghost" id="openGallery">Open Slideshow</button>
+      </div>
+
+      <div class="gallery" id="gallery">
+        <!-- Replace these src with your images (images/photo1.jpg etc) -->
+        <div class="thumb" data-index="0"><img src="images/photo1.jpg" alt="photo1"></div>
+        <div class="thumb" data-index="1"><img src="images/photo2.jpg" alt="photo2"></div>
+        <div class="thumb" data-index="2"><img src="images/photo3.jpg" alt="photo3"></div>
+        <div class="thumb" data-index="3"><img src="images/photo4.jpg" alt="photo4"></div>
+        <div class="thumb" data-index="4"><img src="images/photo5.jpg" alt="photo5"></div>
+        <div class="thumb" data-index="5"><img src="images/photo6.jpg" alt="photo6"></div>
+      </div>
+
+      <footer>Made with lots of ❤️ — from <strong>Mayank Rawat</strong></footer>
+    </div>
+  </header>
+
+  <!-- Slideshow modal -->
+  <div class="modal" id="modal">
+    <div class="slide">
+      <div class="big"><img id="modalImg" src="" alt="big photo"></div>
+      <div class="meta">
+        <h2 id="metaTitle">Memory</h2>
+        <p id="metaText">A sweet moment captured.</p>
+        <div class="navs">
+          <button class="btn" id="prev">◀ Prev</button>
+          <button class="btn" id="next">Next ▶</button>
+          <button class="btn ghost" id="close">Close ✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating hearts for vibes -->
+  <div class="hearts" id="heartsZone">
+    <div class="heart"></div>
+    <div class="heart"></div>
+    <div class="heart"></div>
+  </div>
+
+  <!-- YouTube iframe (hidden) — replace YOUTUBE_VIDEO_ID below -->
+  <div id="ytPlayer" class="hidden"></div>
+
+  <script>
+    // ========== Configuration ==========
+    const YOUTUBE_ID = 'p4QhBGfuA8A'; // <-- Replace this with the YouTube video ID (not full URL)
+
+    // Build image array from DOM thumbs
+    const thumbs = Array.from(document.querySelectorAll('.thumb img'));
+    const images = thumbs.map(t=>t.src);
+
+    // Modal logic (with auto-slideshow)
+    let autoSlideInterval = null;
+    const modal = document.getElementById('modal');
+    const modalImg = document.getElementById('modalImg');
+    const metaTitle = document.getElementById('metaTitle');
+    let current = 0;
+
+    function openModal(index) {
+      // guard: if no images, do nothing
+      if (!images.length) return;
+      current = index;
+      modalImg.src = images[current];
+      metaTitle.textContent = `Photo ${current+1}`;
+      modal.classList.add('open');
+
+      // start slow auto-slide (every 4 seconds)
+      clearInterval(autoSlideInterval);
+      autoSlideInterval = setInterval(next, 4000);
+    }
+
+    function closeModal() {
+      modal.classList.remove('open');
+      clearInterval(autoSlideInterval);
+      autoSlideInterval = null;
+    }
+
+    function next() {
+      if (!images.length) return;
+      current = (current + 1) % images.length;
+      modalImg.src = images[current];
+      metaTitle.textContent = `Photo ${current+1}`;
+    }
+
+    function prev() {
+      if (!images.length) return;
+      current = (current - 1 + images.length) % images.length;
+      modalImg.src = images[current];
+      metaTitle.textContent = `Photo ${current+1}`;
+    }
+
+    document.getElementById('openGallery').addEventListener('click', ()=>openModal(0));
+    document.getElementById('close').addEventListener('click', closeModal);
+    document.getElementById('next').addEventListener('click', ()=>{ next(); });
+    document.getElementById('prev').addEventListener('click', ()=>{ prev(); });
+
+    document.querySelectorAll('.thumb').forEach(t=>t.addEventListener('click', ()=>openModal(Number(t.dataset.index))));
+
+    // ========== YouTube Player (iframe API) ==========
+    // This creates a minimal, controllable player. The button toggles play/pause.
+    let player, isPlaying=false;
+    function onYouTubeIframeAPIReady(){
+      player = new YT.Player('ytPlayer',{
+        height:'0', width:'0', videoId:YOUTUBE_ID, playerVars:{'playsinline':1,'controls':0,'disablekb':1,'modestbranding':1}, events:{ onStateChange:onStateChange }
+      });
+    }
+    function onStateChange(e){ isPlaying = (e.data==1); updateButtons(); }
+    function updateButtons(){ document.getElementById('playBtn').textContent = isPlaying ? 'Playing...' : '▶ Play Song'; }
+
+    document.getElementById('playBtn').addEventListener('click', ()=>{
+      if(!player){ alert('Player not ready — make sure you replaced YOUTUBE_VIDEO_ID with a valid ID.'); return }
+      player.playVideo();
+    });
+    document.getElementById('pauseBtn').addEventListener('click', ()=>{ if(player) player.pauseVideo(); });
+
+    // Load YouTube API async
+    (function(){ var s=document.createElement('script'); s.src='https://www.youtube.com/iframe_api'; var e=document.getElementsByTagName('script')[0]; e.parentNode.insertBefore(s,e); })();
+
+    // tiny floating hearts animation
+    const heartsZone = document.getElementById('heartsZone');
+    function floatHearts(){
+      const h = document.createElement('div'); h.className='heart'; heartsZone.appendChild(h);
+      h.style.position='absolute'; h.style.right = Math.random()*60+'px'; h.style.bottom='-10px'; h.style.opacity=0.9;
+      const duration = 3000 + Math.random()*3000;
+      h.animate([{transform:'translateY(0) scale(1)', opacity:1},{transform:'translateY(-220px) scale(0.6)', opacity:0}],{duration:duration, easing:'ease-out'}).onfinish = ()=> h.remove();
+    }
+    setInterval(floatHearts,800);
+
+    // Responsive tip: if images are local paths, ensure they exist. You can also use external image URLs.
+
+    // Accessibility: close modal on Esc
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); if(e.key==='ArrowRight') next(); if(e.key==='ArrowLeft') prev(); });
+  </script>
+</body>
+</html>
